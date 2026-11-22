@@ -1,0 +1,13 @@
+package com.gepapant.enersense;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class EnersenseApiApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(EnersenseApiApplication.class, args);
+	}
+
+}

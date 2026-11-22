@@ -1,0 +1,943 @@
+<section class="management">
+
+  <div class="management-header">
+
+    <div>
+
+      <p class="kicker">
+        ASSET MANAGEMENT
+      </p>
+
+      <h3>
+        Configure EnerSense
+      </h3>
+
+      <span>
+        Facilities, devices,
+        monitoring rules and users
+      </span>
+
+    </div>
+
+
+    <div class="tabs">
+
+      <button
+        type="button"
+        [class.active]="
+          activeTab() === 'facility'
+        "
+        (click)="
+          selectTab('facility')
+        "
+      >
+        + Facility
+      </button>
+
+
+      <button
+        type="button"
+        [class.active]="
+          activeTab() === 'device'
+        "
+        (click)="
+          selectTab('device')
+        "
+      >
+        + Device
+      </button>
+
+
+      <button
+        type="button"
+        [class.active]="
+          activeTab() === 'threshold'
+        "
+        (click)="
+          selectTab('threshold')
+        "
+      >
+        + Threshold Rule
+      </button>
+
+
+      <button
+        type="button"
+        [class.active]="
+          activeTab() === 'user'
+        "
+        (click)="
+          selectTab('user')
+        "
+      >
+        + User
+      </button>
+
+    </div>
+
+  </div>
+
+
+  @if (successMessage()) {
+
+    <div class="message success">
+      {{ successMessage() }}
+    </div>
+
+  }
+
+
+  @if (errorMessage()) {
+
+    <div class="message error">
+      {{ errorMessage() }}
+    </div>
+
+  }
+
+
+  @if (
+    activeTab() === 'facility'
+  ) {
+
+    <form
+      class="form facility-form"
+      [formGroup]="facilityForm"
+      (ngSubmit)="submitFacility()"
+    >
+
+      <div class="field">
+
+        <label for="facility-name">
+          Facility name
+        </label>
+
+        <input
+          id="facility-name"
+          type="text"
+          formControlName="name"
+          placeholder="e.g. Factory B"
+        />
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="facility-location">
+          Location
+        </label>
+
+        <input
+          id="facility-location"
+          type="text"
+          formControlName="location"
+          placeholder="e.g. Thessaloniki"
+        />
+
+      </div>
+
+
+      <div class="form-action">
+
+        <button
+          type="submit"
+          class="primary-button"
+          [disabled]="facilitySaving()"
+        >
+
+          @if (facilitySaving()) {
+            Saving...
+          } @else {
+            Create Facility
+          }
+
+        </button>
+
+      </div>
+
+    </form>
+
+  }
+
+
+  @else if (
+    activeTab() === 'device'
+  ) {
+
+    <form
+      class="form device-form"
+      [formGroup]="deviceForm"
+      (ngSubmit)="submitDevice()"
+    >
+
+      <div class="field">
+
+        <label for="device-name">
+          Device name
+        </label>
+
+        <input
+          id="device-name"
+          type="text"
+          formControlName="name"
+          placeholder="e.g. Cooling Pump 1"
+        />
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="device-type">
+          Device type
+        </label>
+
+        <select
+          id="device-type"
+          formControlName="type"
+        >
+
+          @for (
+            type of deviceTypes;
+            track type
+          ) {
+
+            <option
+              [value]="type"
+            >
+              {{ type }}
+            </option>
+
+          }
+
+        </select>
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="device-facility">
+          Facility
+        </label>
+
+        <select
+          id="device-facility"
+          formControlName="facilityId"
+        >
+
+          <option [ngValue]="null">
+            Select facility
+          </option>
+
+          @for (
+            facility of facilities();
+            track facility.id
+          ) {
+
+            <option
+              [ngValue]="facility.id"
+            >
+
+              {{ facility.name }}
+              ·
+              {{ facility.location }}
+
+            </option>
+
+          }
+
+        </select>
+
+      </div>
+
+
+      <div class="form-action">
+
+        <button
+          type="submit"
+          class="primary-button"
+          [disabled]="deviceSaving()"
+        >
+
+          @if (deviceSaving()) {
+            Saving...
+          } @else {
+            Create Device
+          }
+
+        </button>
+
+      </div>
+
+    </form>
+
+  }
+
+
+  @else if (
+    activeTab() === 'threshold'
+  ) {
+
+    <form
+      class="form threshold-form"
+      [formGroup]="thresholdForm"
+      (ngSubmit)="submitThresholdRule()"
+    >
+
+      <div class="field">
+
+        <label>
+          Device
+        </label>
+
+        <select
+          formControlName="deviceId"
+          (change)="
+            loadThresholdRules()
+          "
+        >
+
+          @for (
+            device of devices();
+            track device.id
+          ) {
+
+            <option
+              [ngValue]="device.id"
+            >
+              {{ device.name }}
+            </option>
+
+          }
+
+        </select>
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          Metric
+        </label>
+
+        <select
+          formControlName="metric"
+        >
+
+          @for (
+            metric of metrics;
+            track metric
+          ) {
+
+            <option
+              [value]="metric"
+            >
+              {{ metric }}
+            </option>
+
+          }
+
+        </select>
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          Operator
+        </label>
+
+        <select
+          formControlName="comparisonOperator"
+        >
+
+          @for (
+            operator of operators;
+            track operator
+          ) {
+
+            <option
+              [value]="operator"
+            >
+
+              {{
+                operatorSymbol(
+                  operator
+                )
+              }}
+
+              ·
+
+              {{ operator }}
+
+            </option>
+
+          }
+
+        </select>
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          Threshold
+          (
+          {{
+            thresholdUnit(
+              thresholdForm
+                .controls
+                .metric
+                .value
+            )
+          }}
+          )
+        </label>
+
+        <input
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          formControlName="thresholdValue"
+          placeholder="e.g. 40"
+        />
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          Severity
+        </label>
+
+        <select
+          formControlName="severity"
+        >
+
+          @for (
+            severity of severities;
+            track severity
+          ) {
+
+            <option
+              [value]="severity"
+            >
+              {{ severity }}
+            </option>
+
+          }
+
+        </select>
+
+      </div>
+
+
+      <div class="form-action">
+
+        <button
+          type="submit"
+          class="primary-button"
+          [disabled]="thresholdSaving()"
+        >
+
+          @if (
+            thresholdSaving()
+          ) {
+            Saving...
+          } @else {
+            Create Rule
+          }
+
+        </button>
+
+      </div>
+
+    </form>
+
+
+    <div class="existing-rules">
+
+      <div class="rules-header">
+
+        <div>
+
+          <p class="kicker">
+            ACTIVE CONFIGURATION
+          </p>
+
+          <h4>
+            Threshold Rules
+          </h4>
+
+        </div>
+
+        <span>
+
+          {{
+            thresholdRules().length
+          }}
+
+          RULES
+
+        </span>
+
+      </div>
+
+
+      @if (thresholdLoading()) {
+
+        <div class="rules-loading">
+          Loading rules...
+        </div>
+
+      } @else if (
+        thresholdRules().length === 0
+      ) {
+
+        <div class="no-rules">
+
+          No threshold rules
+          configured for this device.
+
+        </div>
+
+      } @else {
+
+        <div class="rules-list">
+
+          @for (
+            rule of thresholdRules();
+            track rule.id
+          ) {
+
+            <div
+              class="rule-item"
+              [class.rule-disabled]="
+                !rule.active
+              "
+            >
+
+              <div class="rule-metric">
+
+                <span>
+                  {{ rule.metric }}
+                </span>
+
+                <strong>
+
+                  {{
+                    operatorSymbol(
+                      rule.comparisonOperator
+                    )
+                  }}
+
+                  {{
+                    rule.thresholdValue
+                  }}
+
+                  {{
+                    thresholdUnit(
+                      rule.metric
+                    )
+                  }}
+
+                </strong>
+
+              </div>
+
+
+              <div class="rule-meta">
+
+                <span
+                  class="severity-badge"
+                  [class.critical]="
+                    rule.severity
+                    === 'CRITICAL'
+                  "
+                >
+                  {{ rule.severity }}
+                </span>
+
+
+                <span
+                  class="active-badge"
+                  [class.inactive]="
+                    !rule.active
+                  "
+                >
+
+                  {{
+                    rule.active
+                      ? 'ACTIVE'
+                      : 'INACTIVE'
+                  }}
+
+                </span>
+
+
+                <button
+                  type="button"
+                  class="rule-action-button"
+                  [disabled]="
+                    ruleUpdatingId()
+                    === rule.id
+                  "
+                  (click)="
+                    setRuleActive(rule)
+                  "
+                >
+
+                  @if (
+                    ruleUpdatingId()
+                    === rule.id
+                  ) {
+
+                    ...
+
+                  } @else if (
+                    rule.active
+                  ) {
+
+                    Disable
+
+                  } @else {
+
+                    Enable
+
+                  }
+
+                </button>
+
+
+                <button
+                  type="button"
+                  class="
+                    rule-action-button
+                    delete-button
+                  "
+                  [disabled]="
+                    ruleDeletingId()
+                    === rule.id
+                  "
+                  (click)="
+                    deleteRule(rule)
+                  "
+                >
+
+                  @if (
+                    ruleDeletingId()
+                    === rule.id
+                  ) {
+                    ...
+                  } @else {
+                    Delete
+                  }
+
+                </button>
+
+              </div>
+
+            </div>
+
+          }
+
+        </div>
+
+      }
+
+    </div>
+
+  }
+
+
+  @else {
+
+    <form
+      class="form user-form"
+      [formGroup]="userForm"
+      (ngSubmit)="submitUser()"
+    >
+
+      <div class="field">
+
+        <label for="user-email">
+          Email
+        </label>
+
+        <input
+          id="user-email"
+          type="email"
+          formControlName="email"
+          autocomplete="off"
+          placeholder="operator@enersense.local"
+        />
+
+        @if (
+          userForm.controls.email.touched
+          &&
+          userForm.controls.email.invalid
+        ) {
+
+          <span class="field-error">
+            Enter a valid email.
+          </span>
+
+        }
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="user-password">
+          Temporary password
+        </label>
+
+        <input
+          id="user-password"
+          type="password"
+          formControlName="password"
+          autocomplete="new-password"
+          placeholder="Minimum 8 characters"
+        />
+
+        @if (
+          userForm.controls.password.touched
+          &&
+          userForm.controls.password.invalid
+        ) {
+
+          <span class="field-error">
+            Password must contain
+            at least 8 characters.
+          </span>
+
+        }
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="user-role">
+          Role
+        </label>
+
+        <select
+          id="user-role"
+          formControlName="role"
+        >
+
+          @for (
+            role of userRoles;
+            track role
+          ) {
+
+            <option [value]="role">
+              {{ role }}
+            </option>
+
+          }
+
+        </select>
+
+      </div>
+
+
+      <div class="form-action">
+
+        <button
+          type="submit"
+          class="primary-button"
+          [disabled]="userSaving()"
+        >
+
+          @if (
+            userSaving()
+          ) {
+            Creating...
+          } @else {
+            Create User
+          }
+
+        </button>
+
+      </div>
+
+    </form>
+
+
+    <div class="existing-rules">
+
+      <div class="rules-header">
+
+        <div>
+
+          <p class="kicker">
+            ACCESS CONTROL
+          </p>
+
+          <h4>
+            Users
+          </h4>
+
+        </div>
+
+        <span>
+          {{ users().length }}
+          USERS
+        </span>
+
+      </div>
+
+
+      @if (usersLoading()) {
+
+        <div class="rules-loading">
+          Loading users...
+        </div>
+
+      } @else if (
+        users().length === 0
+      ) {
+
+        <div class="no-rules">
+          No users found.
+        </div>
+
+      } @else {
+
+        <div class="users-list">
+
+          @for (
+            user of users();
+            track user.id
+          ) {
+
+            <div
+              class="user-item"
+              [class.user-disabled]="
+                !user.active
+              "
+            >
+
+              <div class="user-identity">
+
+                <div class="user-avatar">
+                  {{
+                    user.email
+                      .charAt(0)
+                      .toUpperCase()
+                  }}
+                </div>
+
+                <div>
+
+                  <strong>
+                    {{ user.email }}
+                  </strong>
+
+                  <span>
+                    User ID {{ user.id }}
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              <div class="user-actions">
+
+                <span
+                  class="role-badge"
+                  [class.admin]="
+                    user.role === 'ADMIN'
+                  "
+                >
+                  {{ user.role }}
+                </span>
+
+
+                <span
+                  class="active-badge"
+                  [class.inactive]="
+                    !user.active
+                  "
+                >
+
+                  {{
+                    user.active
+                      ? 'ACTIVE'
+                      : 'INACTIVE'
+                  }}
+
+                </span>
+
+
+                @if (
+                  user.id ===
+                  currentUser()?.id
+                ) {
+
+                  <span class="current-user">
+                    CURRENT USER
+                  </span>
+
+                } @else {
+
+                  <button
+                    type="button"
+                    class="rule-action-button"
+                    [disabled]="
+                      userUpdatingId()
+                      === user.id
+                    "
+                    (click)="
+                      setUserActive(user)
+                    "
+                  >
+
+                    @if (
+                      userUpdatingId()
+                      === user.id
+                    ) {
+
+                      ...
+
+                    } @else if (
+                      user.active
+                    ) {
+
+                      Disable
+
+                    } @else {
+
+                      Enable
+
+                    }
+
+                  </button>
+
+                }
+
+              </div>
+
+            </div>
+
+          }
+
+        </div>
+
+      }
+
+    </div>
+
+  }
+
+</section>

@@ -1,0 +1,828 @@
+<div class="page">
+
+  <aside class="sidebar">
+
+    <div class="brand">
+
+      <div class="brand-mark">
+        ES
+      </div>
+
+      <div class="brand-copy">
+
+        <h1>
+          EnerSense
+        </h1>
+
+        <span>
+          Industrial Energy Monitor
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <div class="sidebar-section">
+
+      <p class="section-title">
+        MONITORED DEVICES
+      </p>
+
+
+      <div class="devices">
+
+        @for (
+          device of devices();
+          track device.id
+        ) {
+
+          <button
+            class="device"
+            [class.active]="
+              selectedDeviceId()
+              === device.id
+            "
+            (click)="
+              selectDevice(
+                device.id
+              )
+            "
+          >
+
+            <div
+              class="device-indicator"
+            >
+
+              <span
+                class="device-dot"
+                [class.online]="
+                  device.status
+                  === 'ACTIVE'
+                "
+              ></span>
+
+            </div>
+
+
+            <div
+              class="device-copy"
+            >
+
+              <strong>
+                {{ device.name }}
+              </strong>
+
+              <span>
+                {{ device.type }}
+              </span>
+
+            </div>
+
+
+            <div
+              class="device-status"
+            >
+              {{ device.status }}
+            </div>
+
+          </button>
+
+        }
+
+      </div>
+
+    </div>
+
+
+    <div class="sidebar-footer">
+
+      <span
+        class="system-dot"
+      ></span>
+
+      <div>
+
+        <strong>
+          System Online
+        </strong>
+
+        <span>
+          MQTT · MongoDB · PostgreSQL
+        </span>
+
+      </div>
+
+    </div>
+
+  </aside>
+
+
+  <main class="content">
+
+    <header class="topbar">
+
+      <div>
+
+        <div class="breadcrumb">
+          ENERSENSE / MONITORING
+        </div>
+
+        <h2>
+
+          {{
+            selectedDevice()?.name
+            ?? 'Operations Dashboard'
+          }}
+
+        </h2>
+
+
+        <div class="device-meta">
+
+          <span>
+
+            {{
+              selectedDevice()
+                ?.facilityName
+              ?? 'No facility selected'
+            }}
+
+          </span>
+
+
+          @if (
+            selectedDevice()
+          ) {
+
+            <span class="separator">
+              /
+            </span>
+
+            <span>
+              {{
+                selectedDevice()
+                  ?.type
+              }}
+            </span>
+
+          }
+
+        </div>
+
+      </div>
+
+
+      <div class="topbar-actions">
+
+        <div class="stream-status">
+
+          <span class="pulse"></span>
+
+          LIVE STREAM
+
+        </div>
+
+
+        @if (
+          currentUser()
+        ) {
+
+          <div class="stream-status">
+
+            {{
+              currentUser()?.role
+            }}
+
+            ·
+
+            {{
+              currentUser()?.email
+            }}
+
+          </div>
+
+        }
+
+
+        <button
+          type="button"
+          class="stream-status"
+          style="
+            border: 0;
+            cursor: pointer;
+          "
+          (click)="logout()"
+        >
+          LOGOUT
+        </button>
+
+      </div>
+
+    </header>
+
+
+    <section class="system-strip">
+
+      <div class="system-item">
+
+        <span>
+          Facilities
+        </span>
+
+        <strong>
+          {{ facilities().length }}
+        </strong>
+
+      </div>
+
+
+      <div class="system-item">
+
+        <span>
+          Devices
+        </span>
+
+        <strong>
+          {{ devices().length }}
+        </strong>
+
+      </div>
+
+
+      <div class="system-item">
+
+        <span>
+          Stream
+        </span>
+
+        <strong class="healthy">
+          Connected
+        </strong>
+
+      </div>
+
+
+      <div class="system-item">
+
+        <span>
+          Data source
+        </span>
+
+        <strong>
+          MQTT
+        </strong>
+
+      </div>
+
+    </section>
+
+
+    @if (
+      isAdmin()
+    ) {
+
+      <app-management-panel
+        [facilities]="
+          facilities()
+        "
+        [devices]="
+          devices()
+        "
+        (facilityCreated)="
+          onFacilityCreated(
+            $event
+          )
+        "
+        (deviceCreated)="
+          onDeviceCreated(
+            $event
+          )
+        "
+      />
+
+    }
+
+
+    @if (
+      errorMessage()
+    ) {
+
+      <div class="error">
+        {{ errorMessage() }}
+      </div>
+
+    }
+
+
+    @if (
+      loading()
+    ) {
+
+      <div class="loading">
+
+        Loading EnerSense data...
+
+      </div>
+
+    } @else {
+
+
+      <section class="stats">
+
+
+        <article
+          class="
+            stat-card
+            temperature
+          "
+        >
+
+          <div class="stat-header">
+
+            <span class="stat-label">
+              TEMPERATURE
+            </span>
+
+            <span class="stat-unit">
+              °C
+            </span>
+
+          </div>
+
+
+          <strong>
+
+            @if (
+              latestReading()
+            ) {
+
+              {{
+                latestReading()!
+                  .temperature
+                  | number:'1.1-1'
+              }}
+
+            } @else {
+
+              —
+
+            }
+
+          </strong>
+
+
+          <span class="stat-description">
+            Current sensor reading
+          </span>
+
+        </article>
+
+
+        <article
+          class="
+            stat-card
+            power
+          "
+        >
+
+          <div class="stat-header">
+
+            <span class="stat-label">
+              POWER
+            </span>
+
+            <span class="stat-unit">
+              W
+            </span>
+
+          </div>
+
+
+          <strong>
+
+            @if (
+              latestReading()
+            ) {
+
+              {{
+                latestReading()!
+                  .power
+                  | number:'1.0-0'
+              }}
+
+            } @else {
+
+              —
+
+            }
+
+          </strong>
+
+
+          <span class="stat-description">
+            Active consumption
+          </span>
+
+        </article>
+
+
+        <article
+          class="
+            stat-card
+            voltage
+          "
+        >
+
+          <div class="stat-header">
+
+            <span class="stat-label">
+              VOLTAGE
+            </span>
+
+            <span class="stat-unit">
+              V
+            </span>
+
+          </div>
+
+
+          <strong>
+
+            @if (
+              latestReading()
+            ) {
+
+              {{
+                latestReading()!
+                  .voltage
+                  | number:'1.1-1'
+              }}
+
+            } @else {
+
+              —
+
+            }
+
+          </strong>
+
+
+          <span class="stat-description">
+            Electrical supply
+          </span>
+
+        </article>
+
+
+        <article
+          class="
+            stat-card
+            alerts-card
+          "
+        >
+
+          <div class="stat-header">
+
+            <span class="stat-label">
+              ACTIVE ALERTS
+            </span>
+
+            <span class="stat-unit">
+              !
+            </span>
+
+          </div>
+
+
+          <strong>
+            {{
+              activeAlertsCount()
+            }}
+          </strong>
+
+
+          <span class="stat-description">
+            Require operator attention
+          </span>
+
+        </article>
+
+      </section>
+
+
+      <app-telemetry-chart
+        [readings]="telemetry()"
+      />
+
+
+      <section class="grid">
+
+
+        <article
+          class="
+            panel
+            telemetry-panel
+          "
+        >
+
+          <div class="panel-header">
+
+            <div>
+
+              <p class="panel-kicker">
+                SENSOR DATA
+              </p>
+
+              <h3>
+                Recent Telemetry
+              </h3>
+
+            </div>
+
+            <span class="panel-description">
+              Latest 10 measurements
+            </span>
+
+          </div>
+
+
+          <div class="table-wrap">
+
+            <table>
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    Timestamp
+                  </th>
+
+                  <th>
+                    Power
+                  </th>
+
+                  <th>
+                    Voltage
+                  </th>
+
+                  <th>
+                    Current
+                  </th>
+
+                  <th>
+                    Temperature
+                  </th>
+
+                </tr>
+
+              </thead>
+
+
+              <tbody>
+
+                @for (
+                  reading of
+                    telemetry()
+                      .slice(
+                        0,
+                        10
+                      );
+                  track reading.id
+                ) {
+
+                  <tr>
+
+                    <td class="timestamp">
+
+                      {{
+                        reading
+                          .recordedAt
+                          | date:'HH:mm:ss'
+                      }}
+
+                    </td>
+
+
+                    <td>
+
+                      <strong>
+
+                        {{
+                          reading.power
+                            | number:'1.0-0'
+                        }}
+
+                      </strong>
+
+                      <span class="table-unit">
+                        W
+                      </span>
+
+                    </td>
+
+
+                    <td>
+
+                      {{
+                        reading.voltage
+                          | number:'1.1-1'
+                      }}
+
+                      <span class="table-unit">
+                        V
+                      </span>
+
+                    </td>
+
+
+                    <td>
+
+                      {{
+                        reading.current
+                          | number:'1.2-2'
+                      }}
+
+                      <span class="table-unit">
+                        A
+                      </span>
+
+                    </td>
+
+
+                    <td>
+
+                      <span
+                        class="
+                          temperature-value
+                        "
+                        [class.hot]="
+                          reading.temperature
+                          > 75
+                        "
+                      >
+
+                        {{
+                          reading
+                            .temperature
+                            | number:'1.1-1'
+                        }}
+
+                        °C
+
+                      </span>
+
+                    </td>
+
+                  </tr>
+
+                }
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </article>
+
+
+        <article
+          class="
+            panel
+            alerts-panel
+          "
+        >
+
+          <div class="panel-header">
+
+            <div>
+
+              <p class="panel-kicker">
+                INCIDENT FEED
+              </p>
+
+              <h3>
+                Alerts
+              </h3>
+
+            </div>
+
+
+            <span class="alert-count">
+
+              {{
+                activeAlertsCount()
+              }}
+
+              ACTIVE
+
+            </span>
+
+          </div>
+
+
+          <div class="alerts">
+
+            @for (
+              alert of
+                alerts()
+                  .slice(
+                    0,
+                    8
+                  );
+              track alert.id
+            ) {
+
+              <div
+                class="alert-item"
+                [class.acknowledged]="
+                  alert.acknowledged
+                "
+              >
+
+                <div class="alert-top">
+
+                  <span
+                    class="severity"
+                    [class.critical]="
+                      alert.severity
+                      === 'CRITICAL'
+                    "
+                  >
+
+                    {{
+                      alert.severity
+                    }}
+
+                  </span>
+
+
+                  <span class="time">
+
+                    {{
+                      alert.createdAt
+                        | date:'HH:mm:ss'
+                    }}
+
+                  </span>
+
+                </div>
+
+
+                <strong
+                  class="alert-device"
+                >
+                  {{ alert.deviceName }}
+                </strong>
+
+
+                <p>
+                  {{ alert.message }}
+                </p>
+
+
+                @if (
+                  !alert.acknowledged
+                ) {
+
+                  <button
+                    class="ack-button"
+                    (click)="
+                      acknowledgeAlert(
+                        alert.id
+                      )
+                    "
+                  >
+                    Acknowledge
+                  </button>
+
+                } @else {
+
+                  <span
+                    class="
+                      acknowledged-label
+                    "
+                  >
+                    ✓ Acknowledged
+                  </span>
+
+                }
+
+              </div>
+
+            }
+
+          </div>
+
+        </article>
+
+
+      </section>
+
+    }
+
+  </main>
+
+</div>

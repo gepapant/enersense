@@ -1,0 +1,179 @@
+<div class="login-page">
+
+  <section class="login-shell">
+
+    <aside class="login-brand">
+
+      <div class="brand-mark">
+        ES
+      </div>
+
+      <div>
+
+        <p class="eyebrow">
+          INDUSTRIAL MONITORING
+        </p>
+
+        <h1>
+          EnerSense
+        </h1>
+
+        <p class="brand-description">
+          Real-time energy and
+          equipment monitoring platform.
+        </p>
+
+      </div>
+
+      <div class="system-list">
+
+        <div>
+          <span class="status-dot"></span>
+          MQTT Telemetry
+        </div>
+
+        <div>
+          <span class="status-dot"></span>
+          Live SSE Monitoring
+        </div>
+
+        <div>
+          <span class="status-dot"></span>
+          PostgreSQL + MongoDB
+        </div>
+
+      </div>
+
+    </aside>
+
+
+    <main class="login-content">
+
+      <div class="login-card">
+
+        <div class="login-heading">
+
+          <p>
+            SECURE ACCESS
+          </p>
+
+          <h2>
+            Sign in
+          </h2>
+
+          <span>
+            Enter your EnerSense
+            operator credentials.
+          </span>
+
+        </div>
+
+
+        @if (errorMessage()) {
+
+          <div class="error-message">
+            {{ errorMessage() }}
+          </div>
+
+        }
+
+
+        <form
+          [formGroup]="form"
+          (ngSubmit)="submit()"
+        >
+
+          <div class="field">
+
+            <label for="email">
+              Email
+            </label>
+
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              autocomplete="username"
+              placeholder="admin@enersense.local"
+            />
+
+            @if (
+              form.controls.email.touched
+              &&
+              form.controls.email.invalid
+            ) {
+
+              <span class="field-error">
+                Enter a valid email.
+              </span>
+
+            }
+
+          </div>
+
+
+          <div class="field">
+
+            <label for="password">
+              Password
+            </label>
+
+            <input
+              id="password"
+              type="password"
+              formControlName="password"
+              autocomplete="current-password"
+              placeholder="Enter password"
+            />
+
+            @if (
+              form.controls.password.touched
+              &&
+              form.controls.password.invalid
+            ) {
+
+              <span class="field-error">
+                Password is required.
+              </span>
+
+            }
+
+          </div>
+
+
+          <button
+            type="submit"
+            class="login-button"
+            [disabled]="loading()"
+          >
+
+            @if (loading()) {
+
+              Signing in...
+
+            } @else {
+
+              Sign in to EnerSense
+
+            }
+
+          </button>
+
+        </form>
+
+
+        <div class="login-footer">
+
+          <span class="secure-dot"></span>
+
+          JWT secured session
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </section>
+
+</div>
