@@ -129,6 +129,12 @@ public class SecurityConfig {
                         auth -> auth
 
                                 .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/"
+                                )
+                                .permitAll()
+
+                                .requestMatchers(
                                         HttpMethod.POST,
                                         "/api/auth/bootstrap",
                                         "/api/auth/login"

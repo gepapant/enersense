@@ -1,8 +1,8 @@
 # EnerSense
 
-EnerSense is a full-stack industrial monitoring application for managing facilities and devices, receiving simulated telemetry through MQTT, evaluating threshold rules, generating alerts, and displaying live updates in an Angular dashboard.
+EnerSense is a full-stack industrial IoT monitoring platform for managing facilities and devices, ingesting telemetry through MQTT, evaluating configurable threshold rules, generating alerts, and delivering live monitoring updates through an Angular dashboard.
 
-The project demonstrates a practical event-driven monitoring architecture using Java, Spring Boot, Angular, PostgreSQL, MongoDB, MQTT, and Server-Sent Events.
+The project demonstrates an end-to-end event-driven architecture using Java, Spring Boot, Angular, PostgreSQL, MongoDB, MQTT, Server-Sent Events, AWS, and MongoDB Atlas.
 
 ## Features
 
@@ -14,27 +14,31 @@ The project demonstrates a practical event-driven monitoring architecture using 
 - Automatic alert generation
 - Alert acknowledgement
 - MQTT telemetry ingestion
-- Simulated industrial device telemetry
+- Simulated industrial telemetry
 - MongoDB telemetry storage
 - PostgreSQL application data
-- Live telemetry updates through Server-Sent Events
-- Angular dashboard with charts and reactive forms
+- Real-time Server-Sent Events
+- Live Angular dashboard
+- Telemetry charts
+- Reactive forms
 - Automated backend tests
 - JaCoCo code coverage
-- GitHub Actions CI
+- Backend and frontend GitHub Actions CI
+- Production cloud deployment
 
 ## Technology Stack
 
 ### Backend
 
 - Java 21
-- Spring Boot
+- Spring Boot 4
 - Spring Security
+- OAuth2 Resource Server
+- JWT
 - Spring Data JPA
 - Spring Data MongoDB
 - Spring Integration MQTT
 - Maven
-- JWT authentication
 
 ### Frontend
 
@@ -47,9 +51,18 @@ The project demonstrates a practical event-driven monitoring architecture using 
 ### Data and Messaging
 
 - PostgreSQL
-- MongoDB
+- MongoDB Atlas
 - MQTT
 - Eclipse Mosquitto
+
+### Cloud
+
+- AWS Elastic Beanstalk
+- Amazon EC2
+- Amazon RDS
+- Amazon S3
+- Amazon CloudFront
+- MongoDB Atlas
 
 ### Testing and CI
 
@@ -59,35 +72,43 @@ The project demonstrates a practical event-driven monitoring architecture using 
 - JaCoCo
 - GitHub Actions
 
-## Architecture
+## Production Architecture
+
+EnerSense is deployed using a multi-service AWS architecture.
 
 ```mermaid
 flowchart LR
 
-    SIM[Device Simulator]
-    MQTT[MQTT Broker - Mosquitto]
-    API[Spring Boot API]
+    USER[Browser]
+    CF[Amazon CloudFront]
+    S3[Amazon S3<br/>Angular Frontend]
+    EB[Elastic Beanstalk<br/>Spring Boot API]
+    RDS[(Amazon RDS<br/>PostgreSQL)]
+    ATLAS[(MongoDB Atlas<br/>Telemetry)]
+    MQTT[Amazon EC2<br/>Mosquitto MQTT Broker]
+    DEVICE[Industrial Device / Simulator]
 
-    PG[(PostgreSQL)]
-    MONGO[(MongoDB)]
+    USER --> CF
 
-    UI[Angular Dashboard]
+    CF -->|Frontend| S3
+    CF -->|/api/*| EB
 
-    SIM -->|Telemetry| MQTT
-    MQTT -->|MQTT Messages| API
+    DEVICE -->|MQTT telemetry| MQTT
+    MQTT -->|MQTT| EB
 
-    API -->|Users / Facilities / Devices / Rules / Alerts| PG
-    API -->|Telemetry Measurements| MONGO
+    EB -->|Application data| RDS
+    EB -->|Telemetry| ATLAS
 
-    API -->|REST API| UI
-    API -->|Server-Sent Events| UI
-
-    UI -->|Commands / Configuration| API
+    EB -->|REST + SSE| CF
 ```
+
+CloudFront provides a single public origin for both the Angular frontend and `/api/*` backend requests.
+
+This allows the frontend to communicate with the backend using relative API URLs while avoiding mixed-content and cross-origin issues.
 
 ## Telemetry Flow
 
-A simulated device publishes telemetry to an MQTT topic:
+Devices publish telemetry using the topic format:
 
 ```text
 enersense/devices/{deviceId}/telemetry
@@ -97,30 +118,56 @@ Example payload:
 
 ```json
 {
-  "power": 2100,
-  "voltage": 230,
-  "current": 9.1,
-  "temperature": 84
+  "power": 1250.0,
+  "voltage": 230.0,
+  "current": 5.4,
+  "temperature": 42.5
 }
 ```
 
-The Spring Boot backend:
+The backend then:
 
-1. Receives the MQTT message.
-2. Extracts the device ID from the topic.
-3. Parses and validates the telemetry payload.
-4. Stores the measurement in MongoDB.
-5. Evaluates active threshold rules.
-6. Creates alerts when a rule is violated.
-7. Publishes live telemetry and alerts to the frontend through Server-Sent Events.
+1. Receives the message through the Mosquitto MQTT broker.
+2. Extracts the device ID from the MQTT topic.
+3. Parses the JSON telemetry payload.
+4. Validates the device.
+5. Stores the telemetry measurement in MongoDB Atlas.
+6. Evaluates active threshold rules.
+7. Generates alerts when thresholds are violated.
+8. Pushes live telemetry and alert events to the Angular frontend using Server-Sent Events.
+
+The production deployment has been validated end-to-end with live MQTT telemetry and real-time dashboard updates without browser refresh.
+
+## Threshold Monitoring
+
+Threshold rules can be configured for:
+
+- Power
+- Voltage
+- Current
+- Temperature
+
+Supported comparison operators include:
+
+- Greater than
+- Greater than or equal
+- Less than
+- Less than or equal
+
+Rules can generate:
+
+- WARNING alerts
+- CRITICAL alerts
+
+For example, a temperature threshold can automatically generate a CRITICAL alert when a device reading exceeds the configured limit.
 
 ## Data Storage
 
-EnerSense uses two databases for different workloads.
+EnerSense uses two different database technologies for different workloads.
 
 ### PostgreSQL
 
-Stores structured application data:
+Amazon RDS PostgreSQL stores structured application data:
 
 - Users
 - Facilities
@@ -130,13 +177,13 @@ Stores structured application data:
 
 ### MongoDB
 
-Stores time-oriented telemetry measurements generated by devices.
+MongoDB Atlas stores time-oriented telemetry measurements.
 
-This separates operational application records from telemetry data.
+This polyglot persistence approach keeps operational relational data separate from high-frequency telemetry data.
 
 ## Authentication and Authorization
 
-The backend uses JWT-based authentication.
+The backend uses JWT-based stateless authentication.
 
 ### ADMIN
 
@@ -145,7 +192,7 @@ Administrators can:
 - Manage users
 - Create facilities
 - Create devices
-- Create and modify threshold rules
+- Configure threshold rules
 - View telemetry
 - View alerts
 - Acknowledge alerts
@@ -161,14 +208,41 @@ Operators can:
 
 Administrative modification endpoints remain restricted to ADMIN users.
 
+## Real-Time Updates
+
+EnerSense uses Server-Sent Events to push new telemetry and alerts from the Spring Boot backend to the Angular frontend.
+
+This allows the dashboard to update live without page refreshes or client-side polling.
+
+The production SSE flow has been verified through CloudFront.
+
+## Health Endpoint
+
+The backend exposes a lightweight public health endpoint:
+
+```http
+GET /
+```
+
+Example response:
+
+```json
+{
+  "status": "ok",
+  "service": "EnerSense API"
+}
+```
+
+This is used to verify that the deployed Spring Boot application is available.
+
 ## Testing
 
-The backend contains automated unit and authorization tests covering the main application services and business rules.
+The backend contains automated unit, service, MQTT, security, authorization, and business-rule tests.
 
 Tested areas include:
 
 - Authentication
-- Security and role authorization
+- Role authorization
 - Facilities
 - Devices
 - Users
@@ -176,16 +250,16 @@ Tested areas include:
 - Alert evaluation
 - Alerts
 - Telemetry
-- MQTT message processing
+- MQTT processing
 - Server-Sent Events
 
-Run the complete backend test suite on Windows:
+Run the backend tests on Windows:
 
 ```powershell
 .\mvnw.cmd clean test
 ```
 
-On Linux or macOS:
+Linux/macOS:
 
 ```bash
 ./mvnw clean test
@@ -195,12 +269,12 @@ On Linux or macOS:
 
 JaCoCo is used for backend coverage reporting.
 
-Current backend coverage:
+Current backend coverage is approximately:
 
-- Instruction coverage: approximately 67%
-- Branch coverage: approximately 56%
+- Instruction coverage: 67%
+- Branch coverage: 56%
 
-Core packages currently include:
+Core package coverage includes:
 
 - Alerts: 90%
 - Realtime / SSE: 89%
@@ -213,16 +287,14 @@ Core packages currently include:
 - Authentication: 66%
 - MQTT: 58%
 
-The device simulator is intentionally not the main focus of unit testing because it is supporting simulation code rather than core application business logic.
-
-Generate and open the coverage report on Windows with:
+Generate the report on Windows:
 
 ```powershell
 .\mvnw.cmd clean test
 start target\site\jacoco\index.html
 ```
 
-The generated report is located at:
+Report location:
 
 ```text
 target/site/jacoco/index.html
@@ -230,31 +302,74 @@ target/site/jacoco/index.html
 
 ## Continuous Integration
 
-GitHub Actions runs the backend Maven test suite automatically on pushes and pull requests.
+GitHub Actions provides separate backend and frontend CI pipelines.
 
-The backend CI pipeline:
+### Backend CI
+
+The backend workflow:
 
 1. Checks out the repository.
 2. Configures Java 21.
-3. Restores the Maven dependency cache.
+3. Restores Maven dependencies.
 4. Runs the complete Maven test suite.
 
-## Local Configuration
+### Frontend CI
 
-Sensitive values are not stored directly in source control.
+The frontend workflow:
 
-Required environment variables include:
+1. Checks out the repository.
+2. Configures Node.js.
+3. Installs dependencies using `npm ci`.
+4. Runs the Angular production build.
+
+Both pipelines run automatically on pushes and pull requests targeting `main`.
+
+## Production Configuration
+
+Sensitive production values are supplied through environment variables and are not stored in source control.
+
+Production configuration includes:
 
 ```text
+SPRING_PROFILES_ACTIVE
+ENERSENSE_DB_URL
+ENERSENSE_DB_USERNAME
 ENERSENSE_DB_PASSWORD
+ENERSENSE_MONGODB_URI
+ENERSENSE_MQTT_BROKER
+ENERSENSE_MQTT_CLIENT_ID
+ENERSENSE_MQTT_TOPIC
 ENERSENSE_JWT_SECRET
+PORT
 ```
 
-The application also requires the following local services:
+Credentials and secrets must never be committed to the repository.
 
+## Local Development
+
+Local development requires:
+
+- Java 21
+- Node.js
 - PostgreSQL
 - MongoDB
 - Eclipse Mosquitto
+
+Run the backend:
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+Run the Angular frontend:
+
+```powershell
+cd enersense-ui
+npm.cmd install
+npm.cmd start
+```
+
+The Angular development proxy forwards `/api` requests to the local Spring Boot application.
 
 ## Project Structure
 
@@ -275,6 +390,7 @@ enersense-api/
 │   │   │       ├── auth/
 │   │   │       ├── device/
 │   │   │       ├── facility/
+│   │   │       ├── health/
 │   │   │       ├── mqtt/
 │   │   │       ├── realtime/
 │   │   │       ├── security/
@@ -282,11 +398,8 @@ enersense-api/
 │   │   │       ├── telemetry/
 │   │   │       ├── threshold/
 │   │   │       └── user/
-│   │   │
 │   │   └── resources/
-│   │
 │   └── test/
-│       └── java/
 │
 ├── mqtt-payload.json
 ├── mvnw
@@ -295,59 +408,55 @@ enersense-api/
 └── README.md
 ```
 
-## Deployment
+## Production Validation
 
-EnerSense is currently being prepared for cloud deployment.
+The complete production pipeline has been successfully validated:
 
-Unlike smaller portfolio applications deployed through simple frontend/backend hosting platforms, the goal for EnerSense is to deploy the complete system using a more realistic cloud architecture.
+```text
+MQTT Publisher
+      ↓
+Mosquitto on Amazon EC2
+      ↓
+Spring Boot on Elastic Beanstalk
+      ↓
+MongoDB Atlas
+      ↓
+Threshold Evaluation
+      ↓
+Alert Generation
+      ↓
+Server-Sent Events
+      ↓
+Angular Dashboard through CloudFront
+```
 
-The deployment architecture will include:
+Validated production functionality includes:
 
-- Angular frontend
-- Spring Boot backend
-- PostgreSQL
-- MongoDB
-- MQTT broker
-- Environment-based secrets
-- Automated CI
-- REST API communication
-- Live Server-Sent Events
-
-The target cloud platform will be Azure or AWS.
-
-Docker is not required for the initial deployment phase.
+- Authentication
+- Facility creation
+- Device creation
+- MQTT telemetry ingestion
+- MongoDB persistence
+- Live dashboard telemetry
+- Server-Sent Events without refresh
+- Threshold evaluation
+- Automatic CRITICAL alert generation
 
 ## Development Status
 
-### Completed
+**Production MVP complete.**
 
-- Spring Boot REST API
-- PostgreSQL persistence
-- MongoDB telemetry storage
-- JWT authentication
-- Role-based authorization
-- Facility management
-- Device management
-- Threshold rule management
-- Alert generation
-- Alert acknowledgement
-- MQTT ingestion
-- Device simulator
-- Server-Sent Events
-- Angular dashboard
-- Live telemetry charts
-- Backend automated tests
-- JaCoCo coverage
-- Backend GitHub Actions CI
+EnerSense now includes the complete application stack, automated CI pipelines, cloud infrastructure, real-time telemetry processing, and production deployment.
 
-### Next Steps
+Future improvements may include:
 
-- Frontend GitHub Actions CI
-- Cloud deployment
-- Deployment configuration for PostgreSQL, MongoDB, and MQTT
-- Production environment configuration
-- Repository screenshots
-- Final portfolio presentation
+- Device provisioning
+- Historical telemetry filtering
+- Advanced analytics
+- Additional alert channels
+- TLS-secured MQTT
+- Infrastructure as Code
+- Containerized deployment
 
 ## Author
 
